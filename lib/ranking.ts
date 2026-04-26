@@ -1,5 +1,5 @@
 import type { MatchResult, Opportunity, Profile } from "./types";
-import { STATE_CENTROIDS, haversineMiles, sameRegion } from "./geocode";
+import { STATE_CENTROIDS, haversineMiles, sameRegion } from "./geo";
 import { findNaics } from "./naicsCatalog";
 
 /**

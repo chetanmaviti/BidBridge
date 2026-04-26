@@ -25,6 +25,7 @@ type ProfileContextValue = {
   capabilityStatement: string;
   setCapabilityStatement: (s: string) => void;
   savedIds: string[];
+  savedOpportunities: Opportunity[];
   toggleSaved: (opp: Opportunity) => void;
 };
 
@@ -34,12 +35,15 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfileState] = useState<Profile | null>(null);
   const [capabilityStatement, setCapabilityStatementState] = useState("");
   const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [savedOpportunities, setSavedOpportunities] = useState<Opportunity[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    const saved = loadSavedOpportunities();
     setProfileState(loadProfile());
     setCapabilityStatementState(loadCapabilityStatement());
-    setSavedIds(loadSavedOpportunities().map((o) => o.id));
+    setSavedOpportunities(saved);
+    setSavedIds(saved.map((o) => o.id));
     setHydrated(true);
   }, []);
 
@@ -55,6 +59,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
   const toggleSaved = useCallback((opp: Opportunity) => {
     const next = toggleSavedOpportunity(opp);
+    setSavedOpportunities(next);
     setSavedIds(next.map((o) => o.id));
   }, []);
 
@@ -66,6 +71,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       capabilityStatement,
       setCapabilityStatement,
       savedIds,
+      savedOpportunities,
       toggleSaved,
     }),
     [
@@ -75,6 +81,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       capabilityStatement,
       setCapabilityStatement,
       savedIds,
+      savedOpportunities,
       toggleSaved,
     ]
   );

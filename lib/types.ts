@@ -101,7 +101,7 @@ export type AwardWinner = {
 
 export type AwardCohort = {
   awards: AwardWinner[];
-  source: "narrow" | "broadened-value" | "broadened-agency";
+  source: "narrow" | "broadened-value" | "broadened-agency" | "broadened-setaside";
   filtersApplied: string[];
 };
 

@@ -92,9 +92,11 @@ export async function getOpportunity(id: string): Promise<Opportunity | null> {
   url.searchParams.set("limit", "1");
 
   // SAM.gov requires postedFrom/postedTo even for noticeid lookups.
+  // Max range is "less than 1 year"; 365 days is rejected with
+  // "Date range must be 1 year(s) apart". 364 satisfies it.
   const today = new Date();
   const from = new Date();
-  from.setDate(from.getDate() - 365);
+  from.setDate(from.getDate() - 364);
   url.searchParams.set("postedFrom", fmtDate(from));
   url.searchParams.set("postedTo", fmtDate(today));
 
@@ -106,8 +108,48 @@ export async function getOpportunity(id: string): Promise<Opportunity | null> {
   const data = (await res.json()) as { opportunitiesData?: unknown[] };
   const list = mapSamResponse(data.opportunitiesData ?? []);
   const opp = list[0] ?? null;
+  if (opp) await resolveDescription(opp);
   cacheSet(key, opp, TTL.SAM_DETAIL);
   return opp;
+}
+
+/**
+ * SAM.gov returns `description` on the search endpoint as a URL pointer,
+ * not the inline text. Resolve it to the actual body so downstream Gemini
+ * prompts get real content. Best-effort — keeps the URL on failure.
+ */
+async function resolveDescription(opp: Opportunity): Promise<void> {
+  const desc = opp.description;
+  if (!desc || !desc.startsWith("http")) return;
+  const apiKey = process.env.SAM_API_KEY;
+  if (!apiKey) return;
+  try {
+    const url = new URL(desc);
+    if (!url.searchParams.has("api_key")) {
+      url.searchParams.set("api_key", apiKey);
+    }
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return;
+    const text = await res.text();
+    // SAM returns either raw text or JSON like { description: "..." }
+    try {
+      const parsed = JSON.parse(text) as { description?: string };
+      if (parsed?.description) {
+        opp.description = parsed.description;
+        return;
+      }
+    } catch {
+      // not JSON — assume raw text
+    }
+    if (text.length > 0 && !text.startsWith("<")) {
+      opp.description = text;
+    }
+  } catch {
+    // leave the URL in place — UI handles missing description
+  }
 }
 
 // ─── Mapper ────────────────────────────────────────────────────────────────
@@ -148,6 +190,43 @@ function asString(x: unknown): string | undefined {
   }
   if (x && typeof x === "object" && "code" in x && typeof (x as { code: unknown }).code === "string") {
     return (x as { code: string }).code;
+  }
+  return undefined;
+}
+
+// SAM.gov returns placeOfPerformance.state as either an object {name,code}
+// or a bare string — and the bare string is the FULL state name, not the
+// 2-letter code. Normalize so downstream match scoring + filtering works
+// against STATE_CENTROIDS and Profile.state (which are 2-letter).
+const STATE_NAME_TO_CODE: Record<string, string> = {
+  alabama: "AL", alaska: "AK", arizona: "AZ", arkansas: "AR", california: "CA",
+  colorado: "CO", connecticut: "CT", delaware: "DE", "district of columbia": "DC",
+  florida: "FL", georgia: "GA", hawaii: "HI", idaho: "ID", illinois: "IL",
+  indiana: "IN", iowa: "IA", kansas: "KS", kentucky: "KY", louisiana: "LA",
+  maine: "ME", maryland: "MD", massachusetts: "MA", michigan: "MI", minnesota: "MN",
+  mississippi: "MS", missouri: "MO", montana: "MT", nebraska: "NE", nevada: "NV",
+  "new hampshire": "NH", "new jersey": "NJ", "new mexico": "NM", "new york": "NY",
+  "north carolina": "NC", "north dakota": "ND", ohio: "OH", oklahoma: "OK",
+  oregon: "OR", pennsylvania: "PA", "rhode island": "RI", "south carolina": "SC",
+  "south dakota": "SD", tennessee: "TN", texas: "TX", utah: "UT", vermont: "VT",
+  virginia: "VA", washington: "WA", "west virginia": "WV", wisconsin: "WI",
+  wyoming: "WY",
+};
+
+function normalizeState(x: unknown): string | undefined {
+  // Object form: prefer the 2-letter code if present, else map the name.
+  if (x && typeof x === "object") {
+    const obj = x as { code?: unknown; name?: unknown };
+    if (typeof obj.code === "string" && obj.code.length === 2) {
+      return obj.code.toUpperCase();
+    }
+    if (typeof obj.name === "string") {
+      return STATE_NAME_TO_CODE[obj.name.toLowerCase()] ?? obj.name;
+    }
+  }
+  if (typeof x === "string") {
+    if (x.length === 2) return x.toUpperCase();
+    return STATE_NAME_TO_CODE[x.toLowerCase()] ?? x;
   }
   return undefined;
 }
@@ -197,7 +276,7 @@ export function mapSamResponse(raw: unknown[]): Opportunity[] {
       description: o.description,
       placeOfPerformance: {
         city: asString(pop.city),
-        state: asString(pop.state),
+        state: normalizeState(pop.state),
         zip: pop.zip,
         country: asString(pop.country),
       },

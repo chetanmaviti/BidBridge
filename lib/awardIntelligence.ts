@@ -6,7 +6,7 @@ import type {
   Profile,
   SetAsideCode,
 } from "./types";
-import { sameRegion } from "./geocode";
+import { sameRegion } from "./geo";
 import { spendingByAward } from "./usaspendingApi";
 
 // ─── Cohort building with progressive broadening (FRD §5.6) ───────────────
@@ -82,6 +82,26 @@ export async function buildCohort(opp: Opportunity): Promise<AwardCohort | null>
         "Last 24 months",
       ].filter(Boolean),
     };
+  }
+
+  // Step 4 — drop set-aside too, keep just NAICS. Last-resort broadening
+  // so the panel populates with real data rather than going to the
+  // insufficient-data state. The "How this is computed" panel will show
+  // "Set-aside dropped" so the framing stays honest.
+  if (setAside) {
+    awards = await spendingByAward({ naics, monthsBack: 24 });
+    if (awards.length >= MIN_COHORT) {
+      return {
+        awards,
+        source: "broadened-setaside",
+        filtersApplied: [
+          `NAICS ${naics}`,
+          "Sub-agency dropped",
+          "Set-aside dropped",
+          "Last 24 months",
+        ],
+      };
+    }
   }
 
   // Insufficient — return what we have so caller can flag insufficientData
