@@ -12,6 +12,7 @@ import { Logo } from "@/components/shared/Logo";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { useToast } from "@/components/shared/ToastProvider";
 import { useProfile } from "@/context/ProfileContext";
+import { cacheOpportunity, loadCachedOpportunity } from "@/lib/opportunityCache";
 import type { IntelligenceStats, Opportunity } from "@/lib/types";
 
 export default function OpportunityPage({ params }: { params: { id: string } }) {
@@ -35,10 +36,20 @@ export default function OpportunityPage({ params }: { params: { id: string } }) 
       setLoadingStats(true);
       setError("");
       try {
-        const detailPromise = fetch(`/api/opportunity/${params.id}`).then(async (res) => {
-          if (!res.ok) throw new Error(await res.text());
-          return (await res.json()) as { opportunity: Opportunity };
-        });
+        const cached = loadCachedOpportunity(params.id);
+        let detailOpportunity = cached;
+        if (!detailOpportunity) {
+          const detail = await fetch(`/api/opportunity/${params.id}`).then(async (res) => {
+            if (!res.ok) throw new Error(await res.text());
+            return (await res.json()) as { opportunity: Opportunity };
+          });
+          detailOpportunity = detail.opportunity;
+          cacheOpportunity(detailOpportunity);
+        }
+
+        if (cancelled) return;
+        setOpportunity(detailOpportunity);
+        setLoadingOpportunity(false);
 
         const intelParams = new URLSearchParams();
         if (profile) {
@@ -47,16 +58,18 @@ export default function OpportunityPage({ params }: { params: { id: string } }) 
           intelParams.set("revenueRange", profile.revenueRange);
           intelParams.set("categories", profile.qualifyingCategories.join(","));
         }
-        const statsPromise = fetch(`/api/award-intelligence/${params.id}?${intelParams.toString()}`)
+        const intelligence = await fetch(`/api/award-intelligence/${params.id}?${intelParams.toString()}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ opportunity: detailOpportunity }),
+        })
           .then(async (res) => {
             if (!res.ok) throw new Error(await res.text());
             return (await res.json()) as { stats?: IntelligenceStats | null };
           })
           .catch(() => ({ stats: null }));
 
-        const [detail, intelligence] = await Promise.all([detailPromise, statsPromise]);
         if (!cancelled) {
-          setOpportunity(detail.opportunity);
           setStats(intelligence.stats ?? null);
         }
       } catch (e) {

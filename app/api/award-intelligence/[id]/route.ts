@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getOpportunity } from "@/lib/samApi";
 import { FALLBACK_OPPORTUNITIES } from "@/lib/mock/opportunities";
 import { buildCohort, computeStats } from "@/lib/awardIntelligence";
-import type { Profile, SetAsideCode } from "@/lib/types";
+import type { Opportunity, Profile, SetAsideCode } from "@/lib/types";
 import { ALL_SET_ASIDES } from "@/lib/setAsides";
 
 export const runtime = "nodejs";
@@ -38,11 +38,16 @@ function profileFromQuery(req: Request): Profile {
   };
 }
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  const id = params.id;
+async function opportunityFromRequest(req: Request, id: string): Promise<Opportunity | null> {
+  if (req.method === "POST") {
+    try {
+      const body = (await req.json()) as { opportunity?: Opportunity };
+      if (body.opportunity?.id === id) return body.opportunity;
+    } catch {
+      // Fall through to the normal lookup path.
+    }
+  }
+
   let opp = id.startsWith("MOCK-")
     ? FALLBACK_OPPORTUNITIES.find((o) => o.id === id)
     : null;
@@ -53,6 +58,15 @@ export async function GET(
       opp = FALLBACK_OPPORTUNITIES.find((o) => o.id === id);
     }
   }
+  return opp ?? null;
+}
+
+async function handle(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  const id = params.id;
+  const opp = await opportunityFromRequest(req, id);
   if (!opp) return NextResponse.json({ error: "opportunity not found" }, { status: 404 });
 
   const profile = profileFromQuery(req);
@@ -76,4 +90,18 @@ export async function GET(
       reason: msg,
     });
   }
+}
+
+export async function GET(
+  req: Request,
+  context: { params: { id: string } }
+) {
+  return handle(req, context);
+}
+
+export async function POST(
+  req: Request,
+  context: { params: { id: string } }
+) {
+  return handle(req, context);
 }

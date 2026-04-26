@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 
 const VALID_SET_ASIDES = new Set<SetAsideCode>(ALL_SET_ASIDES);
 
-type FilterDrop = "state" | "setAside";
+type FilterDrop = "state" | "setAside" | "naics";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -26,10 +26,9 @@ export async function GET(req: Request) {
     .map((s) => s.trim() as SetAsideCode)
     .filter((s) => VALID_SET_ASIDES.has(s));
 
-  // Build the broadening ladder: narrow → drop state → drop set-aside.
-  // We only fall back to the mock list on a hard API failure or when
-  // even the bare-NAICS query is empty (genuinely no federal demand
-  // for that industry right now).
+  // Build the broadening ladder: narrow → drop state → drop set-aside →
+  // drop NAICS. The last step still uses live SAM.gov data, but gives the
+  // user other active opportunities instead of an empty feed.
   const attempts: Array<{ params: SamSearchParams; dropped: FilterDrop[] }> = [
     { params: { naicsCodes, state, setAsides, limit }, dropped: [] },
   ];
@@ -45,6 +44,14 @@ export async function GET(req: Request) {
       dropped: state ? ["state", "setAside"] : ["setAside"],
     });
   }
+  attempts.push({
+    params: { limit },
+    dropped: [
+      ...(state ? (["state"] as const) : []),
+      ...(setAsides.length ? (["setAside"] as const) : []),
+      ...(naicsCodes.length ? (["naics"] as const) : []),
+    ],
+  });
 
   try {
     let lastList: Opportunity[] = [];
@@ -62,8 +69,7 @@ export async function GET(req: Request) {
       lastList = list;
       lastDropped = attempt.dropped;
     }
-    // Even the broadest query returned nothing. SAM is up; there are
-    // genuinely no current federal opportunities for this NAICS.
+    // Even the broadest live SAM.gov query returned nothing.
     return NextResponse.json({
       opportunities: lastList,
       fallback: false,

@@ -15,6 +15,7 @@ import { useProfile } from "@/context/ProfileContext";
 import { streamGeneratedText } from "@/lib/clientStreaming";
 import { cleanSnippet, daysUntil, fullAgency } from "@/lib/format";
 import { STATE_CENTROIDS, haversineMiles } from "@/lib/geo";
+import { cacheOpportunities } from "@/lib/opportunityCache";
 import { match } from "@/lib/ranking";
 import type { MatchResult, Opportunity } from "@/lib/types";
 
@@ -35,6 +36,7 @@ export default function FeedPage() {
   const [filter, setFilter] = useState<FeedFilter>("all");
   const [summaries, setSummaries] = useState<Record<string, string>>({});
   const summaryStarted = useRef(new Set<string>());
+  const showingBroaderSamResults = broadened.includes("naics");
 
   useEffect(() => {
     if (!hydrated) return;
@@ -76,6 +78,7 @@ export default function FeedPage() {
           })
           .slice(0, 25);
         if (!cancelled) {
+          cacheOpportunities(data.opportunities);
           setItems(scored);
           if (data.fallback) setFallbackReason(data.reason ?? "Live SAM.gov data unavailable");
           if (data.broadened?.length) setBroadened(data.broadened);
@@ -209,15 +212,24 @@ export default function FeedPage() {
         <section className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h1 className="font-display text-2xl font-semibold">Matched opportunities</h1>
+              <h1 className="font-display text-2xl font-semibold">
+                {showingBroaderSamResults ? "Broader SAM.gov opportunities" : "Matched opportunities"}
+              </h1>
               <p className="mt-1 text-sm text-ink-muted">
-                Ranked for {profile.businessName} using NAICS {profile.naicsCodes.join(", ")}.
+                {showingBroaderSamResults
+                  ? `No active NAICS match was found, so these are broader live SAM.gov opportunities ranked for ${profile.businessName}.`
+                  : `Ranked for ${profile.businessName} using NAICS ${profile.naicsCodes.join(", ")}.`}
               </p>
             </div>
             {fallbackReason ? (
               <div className="inline-flex items-center gap-2 rounded border border-warn/40 bg-warn/10 px-3 py-2 text-sm text-warn">
                 <AlertCircle className="h-4 w-4" />
                 Fallback feed active
+              </div>
+            ) : showingBroaderSamResults ? (
+              <div className="inline-flex items-center gap-2 rounded border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-medium text-accent">
+                <Info className="h-3.5 w-3.5" />
+                Showing other SAM.gov results
               </div>
             ) : broadened.length && !emptyMatch ? (
               <div className="inline-flex items-center gap-2 rounded border border-border bg-surface px-3 py-2 text-xs text-ink-muted">
@@ -230,7 +242,7 @@ export default function FeedPage() {
           {emptyMatch ? (
             <EmptyState
               title="No live federal opportunities for your NAICS"
-              body={`SAM.gov is up — there are simply no current solicitations under NAICS ${profile.naicsCodes.join(", ")}. This NAICS may not be a typical federal procurement category. Try editing your profile and adding additional NAICS codes that overlap with what you sell.`}
+              body={`SAM.gov is up, but no active solicitations were returned for NAICS ${profile.naicsCodes.join(", ")} or the broader live SAM.gov search. Try editing your profile and adding additional NAICS codes that overlap with what you sell.`}
               action={
                 <Link
                   href="/onboarding?prefill=true"
