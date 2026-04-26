@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx --yes create-next-app@14 . --typescript --tailwind --app --eslint --no-src-dir --import-alias \"@/*\" --use-npm)",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"Landing: %{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -s -o /dev/null -w \"Onboarding: %{http_code}\\\\n\" http://localhost:3000/onboarding)",
+      "Bash(curl -s -o /dev/null -w \"Feed: %{http_code}\\\\n\" http://localhost:3000/feed)",
+      "Bash(curl -s -o /dev/null -w \"Profile: %{http_code}\\\\n\" http://localhost:3000/profile)"
+    ]
+  }
+}
