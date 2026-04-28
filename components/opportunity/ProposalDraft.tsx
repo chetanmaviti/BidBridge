@@ -74,7 +74,6 @@ export function ProposalDraft({
       } catch {
         const fallback = fallbackProposal(profile, opportunity);
         setText(fallback);
-        setError("Gemini proposal generation is unavailable, so a local draft scaffold is shown.");
       } finally {
         setLoading(false);
       }
@@ -91,29 +90,38 @@ export function ProposalDraft({
   const pages = Math.max(1, Math.ceil(words / 500));
 
   return (
-    <section className="rounded-lg border border-border bg-surface p-5">
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <FileText className="h-5 w-5 text-accent" />
-          <h2 className="font-display text-xl font-semibold">Your drafted response</h2>
-        </div>
+    <section className="rounded-xl border border-border bg-surface overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-2.5 border-b border-border px-5 py-4">
+        <FileText className="h-4 w-4 text-accent" />
+        <h2 className="text-sm font-semibold text-ink">Your drafted response</h2>
       </div>
-      <VariantSwitcher active={variant} onSelect={(v) => generate(v)} disabled={loading || !text} />
-      {error ? <p className="mt-4 text-sm text-warn">{error}</p> : null}
-      <div className="mt-5 min-h-80 rounded-lg border border-border bg-bg p-5">
-        <StreamingText text={text} loading={loading} placeholder="The proposal will start after the summary is ready." />
-      </div>
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="font-mono text-xs text-ink-muted">
-          {words} words / about {pages} page{pages === 1 ? "" : "s"}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <CopyButton text={text} />
-          <PdfDownloadButton
-            title={`${profile?.businessName ?? "Bid"} response`}
+
+      <div className="p-5">
+        <VariantSwitcher active={variant} onSelect={(v) => generate(v)} disabled={loading || !text} />
+
+        {error ? <p className="mt-3 text-xs text-warn">{error}</p> : null}
+
+        <div className="mt-4 min-h-72 rounded-lg border border-border bg-bg/60 p-4">
+          <StreamingText
             text={text}
-            fileName={`${slugifyFileName(opportunity.title)}-response.pdf`}
+            loading={loading}
+            placeholder="The proposal will start once the summary is ready."
           />
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="label">
+            {words} words · ~{pages} page{pages === 1 ? "" : "s"}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <CopyButton text={text} />
+            <PdfDownloadButton
+              title={`${profile?.businessName ?? "BidBridge"} response`}
+              text={text}
+              fileName={`${slugifyFileName(opportunity.title)}-response.pdf`}
+            />
+          </div>
         </div>
       </div>
     </section>

@@ -33,7 +33,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast }}>
       {children}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">
+      <div className="pointer-events-none fixed bottom-5 right-5 z-50 flex flex-col gap-2">
         {toasts.map((t) => (
           <ToastItem key={t.id} toast={t} />
         ))}
@@ -48,15 +48,17 @@ function ToastItem({ toast }: { toast: Toast }) {
     const r = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(r);
   }, []);
+
   const tones: Record<Toast["tone"], string> = {
-    success: "border-accent/40 text-accent",
-    error: "border-danger/40 text-danger",
-    info: "border-border text-ink",
+    success: "border-accent/30 bg-accent/8 text-accent",
+    error: "border-danger/30 bg-danger/8 text-danger",
+    info: "border-border bg-surface-2 text-ink",
   };
+
   return (
     <div
-      className={`pointer-events-auto rounded-md border ${tones[toast.tone]} bg-surface px-4 py-2 text-sm font-mono shadow-lg transition-all duration-200 ${
-        mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+      className={`pointer-events-auto rounded-xl border ${tones[toast.tone]} px-4 py-2.5 font-mono text-sm shadow-xl shadow-black/40 backdrop-blur transition-all duration-200 ${
+        mounted ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
       }`}
     >
       {toast.message}

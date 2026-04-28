@@ -3,8 +3,8 @@ import { fullAgency } from "@/lib/format";
 
 export function AgencyBadge({ opportunity }: { opportunity: Opportunity }) {
   return (
-    <div className="inline-flex max-w-full items-center rounded border border-border bg-bg/60 px-2.5 py-1 font-mono text-[11px] uppercase tracking-normal text-ink-muted">
-      <span className="truncate">{fullAgency(opportunity)}</span>
-    </div>
+    <span className="badge border-border bg-bg/40 text-ink-muted">
+      <span className="truncate max-w-[200px]">{fullAgency(opportunity)}</span>
+    </span>
   );
 }

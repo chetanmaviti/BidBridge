@@ -32,24 +32,32 @@ export default function OpportunityPage({ params }: { params: { id: string } }) 
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      setLoadingOpportunity(true);
       setLoadingStats(true);
       setError("");
       try {
         const cached = loadCachedOpportunity(params.id);
-        let detailOpportunity = cached;
-        if (!detailOpportunity) {
+        if (cached) {
+          setOpportunity(cached);
+          setLoadingOpportunity(false);
+        }
+
+        const needsResolve = !cached || cached.description?.startsWith("http");
+        let resolved = cached;
+        if (needsResolve) {
+          if (!cached) setLoadingOpportunity(true);
           const detail = await fetch(`/api/opportunity/${params.id}`).then(async (res) => {
             if (!res.ok) throw new Error(await res.text());
             return (await res.json()) as { opportunity: Opportunity };
           });
-          detailOpportunity = detail.opportunity;
-          cacheOpportunity(detailOpportunity);
+          resolved = detail.opportunity;
+          if (!cancelled) {
+            setOpportunity(resolved);
+            setLoadingOpportunity(false);
+            cacheOpportunity(resolved);
+          }
         }
 
-        if (cancelled) return;
-        setOpportunity(detailOpportunity);
-        setLoadingOpportunity(false);
+        if (!resolved || cancelled) return;
 
         const intelParams = new URLSearchParams();
         if (profile) {
@@ -58,11 +66,14 @@ export default function OpportunityPage({ params }: { params: { id: string } }) 
           intelParams.set("revenueRange", profile.revenueRange);
           intelParams.set("categories", profile.qualifyingCategories.join(","));
         }
-        const intelligence = await fetch(`/api/award-intelligence/${params.id}?${intelParams.toString()}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ opportunity: detailOpportunity }),
-        })
+        const intelligence = await fetch(
+          `/api/award-intelligence/${params.id}?${intelParams.toString()}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ opportunity: resolved }),
+          }
+        )
           .then(async (res) => {
             if (!res.ok) throw new Error(await res.text());
             return (await res.json()) as { stats?: IntelligenceStats | null };
@@ -73,7 +84,8 @@ export default function OpportunityPage({ params }: { params: { id: string } }) 
           setStats(intelligence.stats ?? null);
         }
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Could not load opportunity");
+        if (!cancelled)
+          setError(e instanceof Error ? e.message : "Could not load opportunity");
       } finally {
         if (!cancelled) {
           setLoadingOpportunity(false);
@@ -90,15 +102,16 @@ export default function OpportunityPage({ params }: { params: { id: string } }) 
   if (!hydrated || loadingOpportunity) {
     return (
       <main className="min-h-screen bg-bg">
-        <div className="border-b border-border bg-surface px-5 py-4">
+        <div className="border-b border-border bg-bg px-5 py-3">
           <Logo />
         </div>
-        <div className="mx-auto max-w-7xl space-y-5 px-5 py-6">
-          <div className="h-36 rounded-lg shimmer" />
-          <div className="grid gap-5 lg:grid-cols-2">
-            <div className="h-96 rounded-lg shimmer" />
-            <div className="h-96 rounded-lg shimmer" />
+        <div className="mx-auto max-w-7xl space-y-4 px-5 py-6">
+          <div className="h-32 rounded-xl shimmer" />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="h-96 rounded-xl shimmer" />
+            <div className="h-96 rounded-xl shimmer" />
           </div>
+          <div className="h-64 rounded-xl shimmer" />
         </div>
       </main>
     );
@@ -112,7 +125,7 @@ export default function OpportunityPage({ params }: { params: { id: string } }) 
             title="Opportunity could not be loaded"
             body={error || "The opportunity was not found."}
             action={
-              <Link href="/feed" className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-bg">
+              <Link href="/feed" className="btn-primary">
                 Back to feed
               </Link>
             }
@@ -124,40 +137,52 @@ export default function OpportunityPage({ params }: { params: { id: string } }) 
 
   return (
     <main className="min-h-screen bg-bg">
-      <div className="border-b border-border bg-bg px-5 py-4">
+      {/* Top nav */}
+      <div className="sticky top-0 z-30 border-b border-border bg-bg/95 px-5 py-3 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <Logo />
-          <Link href="/feed" className="inline-flex items-center gap-2 text-sm text-ink-muted hover:text-ink">
-            <ArrowLeft className="h-4 w-4" />
-            Feed
+          <Link
+            href="/feed"
+            className="inline-flex items-center gap-1.5 text-xs text-ink-muted transition-colors hover:text-ink"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back to feed
           </Link>
         </div>
       </div>
+
       <OpportunityHeader
         opportunity={opportunity}
         saved={savedIds.includes(opportunity.id)}
         onToggleSaved={() => {
           toggleSaved(opportunity);
-          toast(savedIds.includes(opportunity.id) ? "Removed from pipeline" : "Saved to pipeline");
+          toast(
+            savedIds.includes(opportunity.id)
+              ? "Removed from pipeline"
+              : "Saved to pipeline"
+          );
         }}
       />
+
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mx-auto max-w-7xl space-y-5 px-5 py-6"
+        transition={{ duration: 0.3 }}
+        className="mx-auto max-w-7xl space-y-4 px-5 py-6"
       >
         {!profile ? (
           <EmptyState
             title="Profile needed for tailored drafting"
             body="You can read the opportunity, but proposal drafting and profile fit work best after onboarding."
             action={
-              <Link href="/onboarding" className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-bg">
+              <Link href="/onboarding" className="btn-primary">
                 Create profile
               </Link>
             }
           />
         ) : null}
-        <div className="grid gap-5 lg:grid-cols-2">
+
+        <div className="grid gap-4 lg:grid-cols-2">
           <PlainSummary opportunity={opportunity} onReady={handleSummaryReady} />
           <ProposalDraft
             opportunity={opportunity}
@@ -166,6 +191,7 @@ export default function OpportunityPage({ params }: { params: { id: string } }) 
             summary={summary}
           />
         </div>
+
         <AwardIntelligence
           stats={stats}
           loading={loadingStats}

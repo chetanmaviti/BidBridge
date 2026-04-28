@@ -21,7 +21,7 @@ export async function streamGeneratedText({
 
   if (!res.ok || !res.body) {
     const body = await res.text().catch(() => "");
-    throw new Error(body || `Gemini stream failed with ${res.status}`);
+    throw new Error(body || `AI stream failed with ${res.status}`);
   }
 
   const reader = res.body.getReader();

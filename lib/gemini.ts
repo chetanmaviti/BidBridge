@@ -3,6 +3,19 @@ import { TTL, cacheGet, cacheSet, hashKey } from "./cache";
 
 const MODEL = "gemini-2.5-flash";
 
+function throwFriendly(e: unknown): never {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (
+    msg.includes("RESOURCE_EXHAUSTED") ||
+    msg.includes("quota") ||
+    msg.includes("429") ||
+    msg.includes("rate limit")
+  ) {
+    throw new Error("You have exceeded the current limit. Please try again later.");
+  }
+  throw e instanceof Error ? e : new Error(msg);
+}
+
 let _client: GoogleGenAI | null = null;
 function getClient(): GoogleGenAI {
   if (_client) return _client;
@@ -15,7 +28,7 @@ function getClient(): GoogleGenAI {
 // ─── Structured (JSON) generation with caching ─────────────────────────────
 
 export type StructuredArgs = {
-  task: string;          // for cache key namespacing
+  task: string;
   systemPrompt: string;
   userInput: string;
   schema: Schema;
@@ -32,24 +45,29 @@ export async function generateStructured<T = unknown>(
   if (cached !== undefined) return cached;
 
   const ai = getClient();
-  const res = await ai.models.generateContent({
-    model: MODEL,
-    contents: [
-      { role: "user", parts: [{ text: args.userInput }] },
-    ],
-    config: {
-      systemInstruction: args.systemPrompt,
-      responseMimeType: "application/json",
-      responseSchema: args.schema,
-      temperature: 0.4,
-    },
-  });
+  let res;
+  try {
+    res = await ai.models.generateContent({
+      model: MODEL,
+      contents: [
+        { role: "user", parts: [{ text: args.userInput }] },
+      ],
+      config: {
+        systemInstruction: args.systemPrompt,
+        responseMimeType: "application/json",
+        responseSchema: args.schema,
+        temperature: 0.4,
+      },
+    });
+  } catch (e) {
+    throwFriendly(e);
+  }
 
   const text = res.text ?? "";
   let parsed: T;
   try {
     parsed = JSON.parse(text) as T;
-  } catch (e) {
+  } catch {
     throw new Error(`Gemini returned invalid JSON: ${text.slice(0, 200)}`);
   }
   cacheSet(key, parsed, TTL.GEMINI);
@@ -89,14 +107,19 @@ export async function generateStream(
   }
 
   const ai = getClient();
-  const stream = await ai.models.generateContentStream({
-    model: MODEL,
-    contents: [{ role: "user", parts: [{ text: args.userInput }] }],
-    config: {
-      systemInstruction: args.systemPrompt,
-      temperature: 0.6,
-    },
-  });
+  let stream;
+  try {
+    stream = await ai.models.generateContentStream({
+      model: MODEL,
+      contents: [{ role: "user", parts: [{ text: args.userInput }] }],
+      config: {
+        systemInstruction: args.systemPrompt,
+        temperature: 0.6,
+      },
+    });
+  } catch (e) {
+    throwFriendly(e);
+  }
 
   let buffer = "";
   return new ReadableStream({
@@ -112,7 +135,7 @@ export async function generateStream(
         cacheSet(key, buffer, TTL.GEMINI);
         controller.close();
       } catch (err) {
-        controller.error(err);
+        try { throwFriendly(err); } catch (friendly) { controller.error(friendly); }
       }
     },
   });
@@ -130,14 +153,19 @@ export async function generateText(args: StreamArgs): Promise<string> {
   if (cached !== undefined) return cached;
 
   const ai = getClient();
-  const res = await ai.models.generateContent({
-    model: MODEL,
-    contents: [{ role: "user", parts: [{ text: args.userInput }] }],
-    config: {
-      systemInstruction: args.systemPrompt,
-      temperature: 0.6,
-    },
-  });
+  let res;
+  try {
+    res = await ai.models.generateContent({
+      model: MODEL,
+      contents: [{ role: "user", parts: [{ text: args.userInput }] }],
+      config: {
+        systemInstruction: args.systemPrompt,
+        temperature: 0.6,
+      },
+    });
+  } catch (e) {
+    throwFriendly(e);
+  }
   const text = res.text ?? "";
   cacheSet(key, text, TTL.GEMINI);
   return text;

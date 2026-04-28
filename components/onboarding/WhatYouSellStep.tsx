@@ -41,7 +41,7 @@ export function WhatYouSellStep({
           className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-          {loading ? "Classifying your business" : "Classify with Gemini"}
+          {loading ? "Classifying your business" : "Classify"}
         </button>
         <p className="text-sm text-ink-muted">Select one to three NAICS codes.</p>
       </div>

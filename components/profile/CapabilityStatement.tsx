@@ -27,22 +27,25 @@ export function CapabilityStatement({
   }
 
   return (
-    <section className="rounded-lg border border-border bg-surface p-5">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-display text-xl font-semibold">Capability statement</h2>
+    <section className="rounded-xl border border-border bg-surface overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+        <h2 className="text-sm font-semibold text-ink">Capability statement</h2>
         <PdfDownloadButton
           title={`${businessName} capability statement`}
           text={draft}
           fileName={`${slugifyFileName(businessName)}-capability-statement.pdf`}
+          className="btn-ghost py-1.5 text-xs"
         />
       </div>
-      <div
-        contentEditable
-        suppressContentEditableWarning
-        onInput={(event) => update(event.currentTarget.innerText)}
-        className="min-h-96 whitespace-pre-wrap rounded-lg border border-border bg-bg p-5 text-sm leading-6 text-ink outline-none focus:border-accent"
-      >
-        {draft || "Capability statement will appear here after onboarding finishes."}
+      <div className="p-5">
+        <div
+          contentEditable
+          suppressContentEditableWarning
+          onInput={(event) => update(event.currentTarget.innerText)}
+          className="min-h-96 whitespace-pre-wrap rounded-lg border border-border bg-bg/60 p-4 text-sm leading-relaxed text-ink outline-none transition-all focus:border-accent/60 focus:ring-2 focus:ring-accent/10"
+        >
+          {draft || "Capability statement will appear here after onboarding finishes."}
+        </div>
       </div>
     </section>
   );

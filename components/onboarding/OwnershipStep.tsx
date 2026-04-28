@@ -52,20 +52,20 @@ export function OwnershipStep({
               type="button"
               key={option.value}
               onClick={() => onToggle(option.value)}
-              className={`rounded-lg border p-4 text-left transition-all hover:-translate-y-0.5 ${
+              className={`rounded-xl border p-4 text-left transition-all hover:-translate-y-0.5 ${
                 active
-                  ? "border-accent bg-accent/10"
-                  : "border-border bg-surface hover:border-accent/50"
+                  ? "border-accent/60 bg-accent/5"
+                  : "border-border bg-surface hover:border-border-bright"
               }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-display text-base font-semibold text-ink">{option.label}</p>
-                  <p className="mt-2 text-sm leading-6 text-ink-muted">{option.body}</p>
+                  <p className="text-sm font-semibold text-ink">{option.label}</p>
+                  <p className="mt-1.5 text-xs leading-relaxed text-ink-muted">{option.body}</p>
                 </div>
                 {active ? (
-                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-accent text-bg">
-                    <Check className="h-4 w-4" />
+                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-accent text-bg">
+                    <Check className="h-3 w-3" />
                   </span>
                 ) : null}
               </div>
@@ -74,16 +74,18 @@ export function OwnershipStep({
         })}
       </div>
 
-      <div className="rounded-lg border border-border bg-bg/60 p-5">
+      <div className={`rounded-xl border p-4 ${inHubZone ? "border-accent/30 bg-accent/5" : "border-border bg-bg/60"}`}>
         <div className="flex items-start gap-3">
-          <MapPinned className={`mt-0.5 h-5 w-5 ${inHubZone ? "text-accent" : "text-ink-muted"}`} />
+          <MapPinned className={`mt-0.5 h-4 w-4 shrink-0 ${inHubZone ? "text-accent" : "text-ink-muted"}`} />
           <div>
-            <p className="font-medium text-ink">
-              {inHubZone ? "Your headquarters is in a HUBZone." : "HUBZone not confirmed for this address."}
+            <p className="text-sm font-medium text-ink">
+              {inHubZone
+                ? "Headquarters confirmed in a HUBZone."
+                : "HUBZone not confirmed for this address."}
             </p>
-            <p className="mt-1 text-sm leading-6 text-ink-muted">
-              {address || "Add an address in step 1 to run the check."}
-              {hubZoneSource ? ` Verified via ${hubZoneSource}.` : ""}
+            <p className="mt-1 text-xs leading-relaxed text-ink-muted">
+              {address || "Add an address in step 1 to run the SBA check."}
+              {hubZoneSource ? ` · Verified via ${hubZoneSource}.` : ""}
             </p>
           </div>
         </div>

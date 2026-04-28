@@ -3,7 +3,7 @@
 export function StreamingText({
   text,
   loading,
-  placeholder = "Preparing analysis...",
+  placeholder = "Preparing analysis…",
 }: {
   text: string;
   loading: boolean;
@@ -11,19 +11,26 @@ export function StreamingText({
 }) {
   if (!text && loading) {
     return (
-      <div className="space-y-3">
-        <div className="h-4 w-3/4 rounded shimmer" />
-        <div className="h-4 w-full rounded shimmer" />
-        <div className="h-4 w-2/3 rounded shimmer" />
+      <div className="space-y-2.5">
+        <div className="h-3.5 w-3/4 rounded-md shimmer" />
+        <div className="h-3.5 w-full rounded-md shimmer" />
+        <div className="h-3.5 w-2/3 rounded-md shimmer" />
+        <div className="h-3.5 w-5/6 rounded-md shimmer" />
       </div>
+    );
+  }
+
+  if (!text) {
+    return (
+      <p className="text-sm text-ink-muted">{placeholder}</p>
     );
   }
 
   return (
     <div
-      className={`whitespace-pre-wrap text-sm leading-6 text-ink ${loading ? "cursor" : ""}`}
+      className={`whitespace-pre-wrap text-sm leading-relaxed text-ink ${loading ? "cursor" : ""}`}
     >
-      {text || placeholder}
+      {text}
     </div>
   );
 }

@@ -12,7 +12,6 @@ import type { NaicsSuggestion } from "@/components/onboarding/NaicsCard";
 import { Logo } from "@/components/shared/Logo";
 import { useProfile } from "@/context/ProfileContext";
 import { streamGeneratedText } from "@/lib/clientStreaming";
-import { searchNaics } from "@/lib/naicsCatalog";
 import { isSmallForAnyNaics } from "@/lib/sizeStandards";
 import { qualifyingCategories } from "@/lib/setAsides";
 import type { OwnershipFlag, Profile, RevenueRange } from "@/lib/types";
@@ -175,16 +174,25 @@ export function OnboardingClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ task: "classify-naics", input: description }),
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        let msg = "Classification failed.";
+        try {
+          const parsed = JSON.parse(body) as { error?: string };
+          if (parsed.error) msg = parsed.error;
+        } catch {
+          if (body) msg = body;
+        }
+        throw new Error(msg);
+      }
       const data = (await res.json()) as { result?: { codes?: NaicsSuggestion[] } };
       const codes = (data.result?.codes ?? []).slice(0, 5);
       if (!codes.length) throw new Error("No NAICS codes returned");
       setSuggestions(codes);
       setSelectedCodes((current) => current.filter((code) => codes.some((c) => c.code === code)));
-    } catch {
-      const fallback = fallbackClassify(description);
-      setSuggestions(fallback);
-      setClassifyError("Gemini classification is unavailable, so local NAICS matches are shown.");
+    } catch (e) {
+      setSuggestions([]);
+      setClassifyError(e instanceof Error ? e.message : "Classification failed. Please try again.");
     } finally {
       setClassifying(false);
     }
@@ -265,30 +273,32 @@ export function OnboardingClient() {
   return (
     <main className="min-h-screen bg-bg px-5 py-6">
       <div className="mx-auto max-w-5xl">
-        <header className="mb-8 flex items-center justify-between">
+        <header className="mb-6 flex items-center justify-between">
           <Logo />
           <button
             type="button"
             onClick={() => router.push("/feed")}
-            className="rounded-md border border-border px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-surface hover:text-ink"
+            className="btn-ghost py-2 text-xs"
           >
             Skip to feed
           </button>
         </header>
 
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-lg border border-border bg-surface p-5 shadow-2xl shadow-black/20 md:p-8"
+          transition={{ duration: 0.25 }}
+          className="rounded-xl border border-border bg-surface shadow-2xl shadow-black/30"
         >
-          <ProgressBar step={step} />
-          <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_320px]">
+          <div className="border-b border-border px-6 py-4">
+            <ProgressBar step={step} />
+          </div>
+
+          <div className="grid gap-8 p-6 lg:grid-cols-[1fr_280px] lg:p-8">
             <div>
               <div className="mb-6">
-                <p className="font-mono text-xs uppercase tracking-normal text-accent">
-                  Step {step + 1} of 3
-                </p>
-                <h1 className="mt-2 font-display text-3xl font-semibold tracking-normal text-ink">
+                <p className="label text-accent">Step {step + 1} of 3</p>
+                <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight text-ink">
                   {step === 0
                     ? "Set up your business profile"
                     : step === 1
@@ -334,7 +344,7 @@ export function OnboardingClient() {
                   type="button"
                   onClick={() => setStep((s) => Math.max(0, s - 1))}
                   disabled={step === 0}
-                  className="inline-flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-bg disabled:cursor-not-allowed disabled:opacity-40"
+                  className="btn-ghost py-2 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Back
@@ -344,7 +354,7 @@ export function OnboardingClient() {
                     type="button"
                     onClick={next}
                     disabled={!canContinue || classifying}
-                    className="inline-flex items-center gap-2 rounded-md bg-accent px-5 py-2.5 text-sm font-semibold text-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="btn-primary disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {step === 1 && !suggestions.length ? "Classify and continue" : "Continue"}
                     <ArrowRight className="h-4 w-4" />
@@ -354,21 +364,26 @@ export function OnboardingClient() {
                     type="button"
                     onClick={finish}
                     disabled={!selectedCodes.length || finishing}
-                    className="inline-flex items-center gap-2 rounded-md bg-accent px-5 py-2.5 text-sm font-semibold text-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="btn-primary disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <CheckCircle2 className="h-4 w-4" />
-                    {finishing ? "Saving" : "Finish profile"}
+                    {finishing ? "Saving…" : "Finish profile"}
                   </button>
                 )}
               </div>
             </div>
 
-            <aside className="space-y-4 rounded-lg border border-border bg-bg/60 p-5">
-              <p className="font-display text-lg font-semibold">Live profile</p>
-              <Metric label="NAICS selected" value={selectedCodes.length ? selectedCodes.join(", ") : "Pending"} />
+            {/* Live profile sidebar */}
+            <aside className="space-y-3 rounded-xl border border-border bg-bg/60 p-4">
+              <p className="label mb-1">Live profile</p>
+              <Metric label="NAICS" value={selectedCodes.length ? selectedCodes.join(", ") : "Pending"} mono />
               <Metric label="Size status" value={isSmall ? "Small business" : "Check standards"} />
               <Metric label="Set-asides" value={categories.length ? categories.join(", ") : "Pending"} />
-              <Metric label="HUBZone" value={hubZone.inHubZone ? "Confirmed" : "Not confirmed"} />
+              <Metric
+                label="HUBZone"
+                value={hubZone.inHubZone ? "Confirmed" : "Not confirmed"}
+                highlight={hubZone.inHubZone}
+              />
             </aside>
           </div>
         </motion.div>
@@ -377,42 +392,29 @@ export function OnboardingClient() {
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({
+  label,
+  value,
+  mono,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  highlight?: boolean;
+}) {
   return (
-    <div className="rounded border border-border bg-surface px-3 py-3">
-      <p className="font-mono text-[11px] uppercase tracking-normal text-ink-muted">{label}</p>
-      <p className="mt-1 text-sm font-medium text-ink">{value}</p>
+    <div className="rounded-lg border border-border bg-surface px-3 py-2.5">
+      <p className="label">{label}</p>
+      <p
+        className={`mt-1 text-sm font-medium ${mono ? "font-mono" : ""} ${highlight ? "text-accent" : "text-ink"}`}
+      >
+        {value}
+      </p>
     </div>
   );
 }
 
-function fallbackClassify(description: string): NaicsSuggestion[] {
-  const terms = description.toLowerCase();
-  const preferred = [
-    terms.includes("packag") ? "322220" : "",
-    terms.includes("print") ? "323111" : "",
-    terms.includes("screen") ? "323113" : "",
-    terms.includes("software") ? "541511" : "",
-    terms.includes("clean") ? "561720" : "",
-  ].filter(Boolean);
-  const local = [
-    ...preferred,
-    ...searchNaics(description, 8).map((n) => n.code),
-    "322220",
-    "323111",
-    "541613",
-  ];
-  const unique = Array.from(new Set(local)).slice(0, 5);
-  return unique.map((code, index) => {
-    const item = searchNaics(code, 1)[0];
-    return {
-      code,
-      title: item?.title ?? "Related federal buying category",
-      confidence: Math.max(0.55, 0.92 - index * 0.08),
-      why: item?.description ?? "This code is a plausible local match for the business description.",
-    };
-  });
-}
 
 async function generateCapability(
   profile: Profile,

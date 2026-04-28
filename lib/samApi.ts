@@ -115,40 +115,58 @@ export async function getOpportunity(id: string): Promise<Opportunity | null> {
 
 /**
  * SAM.gov returns `description` on the search endpoint as a URL pointer,
- * not the inline text. Resolve it to the actual body so downstream Gemini
- * prompts get real content. Best-effort — keeps the URL on failure.
+ * not the inline text. Resolve it to the actual body so downstream AI
+ * prompts get real content. Best-effort — sets description to null on
+ * failure so the UI can show a graceful fallback instead of a raw URL.
  */
 async function resolveDescription(opp: Opportunity): Promise<void> {
   const desc = opp.description;
   if (!desc || !desc.startsWith("http")) return;
   const apiKey = process.env.SAM_API_KEY;
-  if (!apiKey) return;
+  if (!apiKey) { opp.description = undefined; return; }
   try {
     const url = new URL(desc);
     if (!url.searchParams.has("api_key")) {
       url.searchParams.set("api_key", apiKey);
     }
     const res = await fetch(url, {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(8000),
+      headers: { Accept: "application/json, text/html, */*" },
+      signal: AbortSignal.timeout(10000),
     });
-    if (!res.ok) return;
+    if (!res.ok) { opp.description = undefined; return; }
     const text = await res.text();
-    // SAM returns either raw text or JSON like { description: "..." }
+
+    // SAM sometimes returns JSON { description: "..." }
     try {
       const parsed = JSON.parse(text) as { description?: string };
       if (parsed?.description) {
         opp.description = parsed.description;
         return;
       }
-    } catch {
-      // not JSON — assume raw text
-    }
-    if (text.length > 0 && !text.startsWith("<")) {
+    } catch { /* not JSON */ }
+
+    // SAM often returns HTML — strip tags to plain text
+    if (text.startsWith("<")) {
+      const stripped = text
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+        .replace(/&nbsp;/g, " ").replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+        .replace(/&#\d+;/g, " ").replace(/\s+/g, " ").trim();
+      if (stripped.length > 80) {
+        opp.description = stripped;
+        return;
+      }
+    } else if (text.length > 0) {
       opp.description = text;
+      return;
     }
+
+    // Could not extract useful text — clear the URL so the UI knows
+    opp.description = undefined;
   } catch {
-    // leave the URL in place — UI handles missing description
+    opp.description = undefined;
   }
 }
 
@@ -280,7 +298,10 @@ export function mapSamResponse(raw: unknown[]): Opportunity[] {
         zip: pop.zip,
         country: asString(pop.country),
       },
-      uiLink: o.uiLink ?? (o.noticeId ? `https://sam.gov/opp/${o.noticeId}/view` : undefined),
+      uiLink:
+        o.uiLink ??
+        o.links?.find((l) => l.rel === "uiLink" || l.href?.includes("sam.gov/opp"))?.href ??
+        (o.noticeId ? `https://sam.gov/opp/${o.noticeId}/view` : undefined),
     };
     return opp;
   });

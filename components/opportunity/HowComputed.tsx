@@ -8,19 +8,33 @@ export function HowComputed({
   opportunity: Opportunity;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-bg p-5">
-      <p className="font-mono text-xs uppercase tracking-normal text-ink">How this is computed</p>
-      <p className="mt-3 max-w-3xl text-sm leading-6 text-ink-muted">
-        We pulled {stats.cohortSize} contracts awarded under {opportunity.naicsCode ? `NAICS ${opportunity.naicsCode}` : "this NAICS category"} in the last 24 months. The cards above aggregate award amounts, award timing, recipient concentration, and the share of past winners whose profile resembles yours.
-      </p>
-      <div className="mt-4 flex flex-wrap gap-2">
-        {stats.filtersApplied.map((filter) => (
-          <span key={filter} className="rounded border border-border bg-surface px-2.5 py-1 font-mono text-[11px] text-ink-muted">
-            {filter}
-          </span>
-        ))}
+    <div className="rounded-xl border border-border bg-bg/60 px-5 py-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex-1">
+          <p className="label mb-1.5">How this is computed</p>
+          <p className="max-w-3xl text-xs leading-relaxed text-ink-muted">
+            Pulled {stats.cohortSize} contracts awarded under{" "}
+            {opportunity.naicsCode
+              ? `NAICS ${opportunity.naicsCode}`
+              : "this NAICS category"}{" "}
+            in the last 24 months. Cards aggregate award amounts, timing, recipient
+            concentration, and profile similarity to past winners.
+          </p>
+        </div>
+        <p className="font-mono text-[10px] text-ink-dim">USAspending.gov</p>
       </div>
-      <p className="mt-4 font-mono text-xs text-ink-muted">Source: USAspending.gov / official federal data</p>
+      {stats.filtersApplied.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {stats.filtersApplied.map((filter) => (
+            <span
+              key={filter}
+              className="rounded-md border border-border bg-surface px-2 py-0.5 font-mono text-[10px] text-ink-muted"
+            >
+              {filter}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

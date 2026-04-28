@@ -14,16 +14,16 @@ export function DeadlineBadge({ date }: { date?: string }) {
   const days = daysUntil(date);
   const tone =
     days !== null && days < 0
-      ? "text-ink-muted border-border"
+      ? "text-ink-dim border-border"
       : days !== null && days < 7
-        ? "text-danger border-danger/40 bg-danger/10"
+        ? "text-danger border-danger/30 bg-danger/8"
         : days !== null && days < 14
-          ? "text-warn border-warn/40 bg-warn/10"
+          ? "text-warn border-warn/30 bg-warn/8"
           : "text-ink-muted border-border bg-bg";
 
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded border px-2 py-1 font-mono text-[11px] ${tone}`}>
-      <Clock className="h-3 w-3" />
+    <span className={`badge ${tone}`}>
+      <Clock className="h-2.5 w-2.5" />
       {deadlineLabel(date)}
     </span>
   );

@@ -8,18 +8,11 @@ export type HubZoneResult = {
 };
 
 /**
- * Curated allowlist of ZIP codes known to fall within an SBA HUBZone.
- * Used only when the live SBA HUBZone API is unreachable, so the demo
- * stays deterministic (the FRD-cited endpoint at hubzone-prod.azurewebsites.net
- * has been observed offline). Source: cross-checked against
- * https://maps.certify.sba.gov/hubzone/map/ as of 2026-04.
- *
- * This is intentionally narrow — adding a ZIP here is a claim about real
- * HUBZone designation, not a convenience hack. If a ZIP is only partially
- * HUBZone, leave it out and let the API decide (or fall through to false).
+ * Curated ZIP allowlist — last resort when both live APIs are unreachable.
+ * Only add ZIPs that are definitively in a HubZone per maps.certify.sba.gov.
  */
 const KNOWN_HUBZONE_ZIPS = new Set<string>([
-  "20782", // Hyattsville, MD — demo address (Knox Rd / 4523)
+  "20782", // Hyattsville, MD
   "20783", // Hyattsville / Adelphi
   "20712", // Mount Rainier, MD
   "20722", // Brentwood, MD
@@ -35,14 +28,10 @@ function zipFrom(address: string): string | undefined {
  * SBA HUBZone determination from a postal address.
  *
  * Flow:
- *   1. Geocode the address (Nominatim)
- *   2. Query SBA HUBZone Map API with lat/lng
- *   3. Return inHubZone + expiration date
- *
- * On any failure, falls back to a curated ZIP allowlist (so the demo
- * remains deterministic when the public endpoint is offline). When the
- * allowlist is the source, `source: "fallback"` makes that explicit —
- * no fake claim of API verification.
+ *   1. Query the SBA HUBZone Map search API (maps.certify.sba.gov) — most
+ *      reliable; this is the backend that powers the official SBA map.
+ *   2. Fall back to the legacy hubzone-prod endpoint using geocoded lat/lng.
+ *   3. Last resort: curated ZIP allowlist.
  */
 export async function checkHubZone(address: string): Promise<HubZoneResult> {
   const trimmed = address.trim();
@@ -53,7 +42,6 @@ export async function checkHubZone(address: string): Promise<HubZoneResult> {
     const apiResult = await tryLiveApi(trimmed);
     if (apiResult) return apiResult;
 
-    // API unreachable — consult the curated ZIP allowlist.
     const zip = zipFrom(trimmed);
     if (zip && KNOWN_HUBZONE_ZIPS.has(zip)) {
       return { inHubZone: true, source: "fallback" };
@@ -63,6 +51,71 @@ export async function checkHubZone(address: string): Promise<HubZoneResult> {
 }
 
 async function tryLiveApi(address: string): Promise<HubZoneResult | null> {
+  // Primary: SBA HUBZone Map search (backs maps.certify.sba.gov)
+  const certify = await tryCertifyMapApi(address);
+  if (certify) return certify;
+
+  // Secondary: legacy hubzone-prod REST endpoint (frequently offline)
+  const legacy = await tryLegacySbaApi(address);
+  if (legacy) return legacy;
+
+  return null;
+}
+
+/**
+ * SBA Certify HUBZone Map search API.
+ * Accepts a plain address string; the SBA handles geocoding on their end.
+ * Response is a JS snippet wrapping a JSON object — we extract and parse it.
+ */
+async function tryCertifyMapApi(address: string): Promise<HubZoneResult | null> {
+  try {
+    const url = new URL("https://maps.certify.sba.gov/hubzone/map/search");
+    url.searchParams.set("search", address);
+
+    const res = await fetch(url, {
+      headers: {
+        Accept: "text/javascript, application/javascript, */*; q=0.01",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+
+    const text = await res.text();
+
+    // The response embeds: var response = JSON.parse('{ ... }');
+    // Capture everything between JSON.parse(' and '); handling escaped quotes.
+    const match = text.match(/JSON\.parse\('((?:[^'\\]|\\.)*)'\)/);
+    if (!match) return null;
+
+    const jsonStr = match[1].replace(/\\'/g, "'");
+    const data = JSON.parse(jsonStr) as {
+      hubzone?: Array<{ current_status?: string; expires?: string | null }>;
+      until_date?: string | null;
+    };
+
+    const entries = data.hubzone ?? [];
+    const inHubZone = entries.some((h) => h.current_status === "Qualified");
+    const expires =
+      data.until_date ??
+      entries.find((h) => h.expires)?.expires ??
+      undefined;
+
+    return {
+      inHubZone,
+      expiresOn: expires ?? undefined,
+      source: "api",
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Legacy SBA HUBZone REST endpoint (hubzone-prod.azurewebsites.net).
+ * Requires geocoding the address first via Nominatim.
+ */
+async function tryLegacySbaApi(address: string): Promise<HubZoneResult | null> {
   try {
     const geo = await geocode(address);
     if (!geo) return null;
@@ -71,12 +124,8 @@ async function tryLiveApi(address: string): Promise<HubZoneResult | null> {
       "https://hubzone-prod.azurewebsites.net/api/sites/lookup",
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ latitude: geo.lat, longitude: geo.lng }),
-        // Don't let a slow/dead endpoint stall the onboarding form.
         signal: AbortSignal.timeout(4000),
       }
     );

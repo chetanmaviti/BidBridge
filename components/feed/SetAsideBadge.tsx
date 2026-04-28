@@ -4,19 +4,17 @@ import type { SetAsideCode } from "@/lib/types";
 export function SetAsideBadge({ code }: { code?: SetAsideCode | null }) {
   if (!code) {
     return (
-      <span className="rounded border border-border bg-bg px-2 py-1 font-mono text-[11px] text-ink-muted">
-        Open
-      </span>
+      <span className="badge border-border text-ink-muted">Open</span>
     );
   }
   const def = SET_ASIDE_CATALOG[code];
   return (
     <span
-      className="rounded border px-2 py-1 font-mono text-[11px]"
+      className="badge"
       style={{
         color: def.color,
-        borderColor: `${def.color}66`,
-        backgroundColor: `${def.color}14`,
+        borderColor: `${def.color}44`,
+        backgroundColor: `${def.color}0d`,
       }}
       title={def.label}
     >

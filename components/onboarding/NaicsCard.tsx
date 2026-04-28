@@ -25,23 +25,23 @@ export function NaicsCard({
       onClick={onToggle}
       disabled={disabled}
       className={cn(
-        "w-full rounded-lg border bg-surface p-4 text-left transition-all hover:-translate-y-0.5 hover:border-accent/60",
-        selected ? "border-accent ring-1 ring-accent/40" : "border-border",
-        disabled && !selected ? "cursor-not-allowed opacity-50 hover:translate-y-0 hover:border-border" : ""
+        "w-full rounded-xl border bg-surface p-4 text-left transition-all",
+        selected
+          ? "border-accent/60 bg-accent/5 shadow-[0_0_0_1px_var(--accent-glow)]"
+          : "border-border hover:border-border-bright",
+        disabled && !selected ? "cursor-not-allowed opacity-40" : "hover:-translate-y-0.5"
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="font-mono text-xs text-accent">{item.code}</p>
-          <h3 className="mt-1 font-display text-base font-semibold text-ink">
-            {item.title}
-          </h3>
+          <p className="font-mono text-[11px] text-accent">{item.code}</p>
+          <h3 className="mt-1 text-sm font-semibold text-ink">{item.title}</h3>
         </div>
-        {selected ? <CheckCircle2 className="h-5 w-5 shrink-0 text-accent" /> : null}
+        {selected ? <CheckCircle2 className="h-4 w-4 shrink-0 text-accent" /> : null}
       </div>
-      <p className="mt-3 text-sm leading-6 text-ink-muted">{item.why}</p>
-      <p className="mt-3 font-mono text-xs text-ink-muted">
-        {Math.round(item.confidence * 100)}% confidence
+      <p className="mt-2 text-xs leading-relaxed text-ink-muted">{item.why}</p>
+      <p className="mt-2 font-mono text-[10px] text-ink-muted">
+        {Math.round(item.confidence * 100)}% match
       </p>
     </button>
   );

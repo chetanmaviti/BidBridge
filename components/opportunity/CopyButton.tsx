@@ -10,13 +10,13 @@ export function CopyButton({ text }: { text: string }) {
       type="button"
       onClick={async () => {
         await navigator.clipboard.writeText(text);
-        toast("Copied");
+        toast("Copied to clipboard");
       }}
       disabled={!text.trim()}
-      className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-ink transition-colors hover:bg-bg disabled:cursor-not-allowed disabled:opacity-50"
+      className="btn-ghost py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
     >
-      <Copy className="h-4 w-4" />
-      Copy response
+      <Copy className="h-3.5 w-3.5" />
+      Copy
     </button>
   );
 }

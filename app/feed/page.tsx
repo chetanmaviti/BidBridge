@@ -173,9 +173,9 @@ export default function FeedPage() {
     return (
       <main className="min-h-screen bg-bg">
         <FeedHeader search={search} onSearchChange={setSearch} filter={filter} onFilterChange={setFilter} />
-        <div className="mx-auto grid max-w-7xl gap-6 px-5 py-6 lg:grid-cols-[1fr_300px]">
-          <div className="space-y-4">
-            {Array.from({ length: 6 }).map((_, index) => (
+        <div className="mx-auto grid max-w-7xl gap-5 px-5 py-6 lg:grid-cols-[1fr_288px]">
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, index) => (
               <SkeletonCard key={index} />
             ))}
           </div>
@@ -190,12 +190,9 @@ export default function FeedPage() {
         <div className="mx-auto max-w-2xl">
           <EmptyState
             title="Create a profile to rank opportunities"
-            body="Bid needs NAICS codes, size status, and set-aside qualifications before it can score federal opportunities."
+            body="BidBridge needs NAICS codes, size status, and set-aside qualifications before it can score federal opportunities."
             action={
-              <Link
-                href="/onboarding"
-                className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-bg"
-              >
+              <Link href="/onboarding" className="btn-primary">
                 Start onboarding
               </Link>
             }
@@ -208,33 +205,34 @@ export default function FeedPage() {
   return (
     <main className="min-h-screen bg-bg">
       <FeedHeader search={search} onSearchChange={setSearch} filter={filter} onFilterChange={setFilter} />
-      <div className="mx-auto grid max-w-7xl gap-6 px-5 py-6 lg:grid-cols-[1fr_300px]">
+      <div className="mx-auto grid max-w-7xl gap-5 px-5 py-6 lg:grid-cols-[1fr_288px]">
         <section className="space-y-4">
+          {/* Feed header row */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h1 className="font-display text-2xl font-semibold">
-                {showingBroaderSamResults ? "Broader SAM.gov opportunities" : "Matched opportunities"}
+              <h1 className="text-base font-semibold text-ink">
+                {showingBroaderSamResults ? "Broader SAM.gov results" : "Matched opportunities"}
               </h1>
-              <p className="mt-1 text-sm text-ink-muted">
+              <p className="mt-0.5 text-xs text-ink-muted">
                 {showingBroaderSamResults
-                  ? `No active NAICS match was found, so these are broader live SAM.gov opportunities ranked for ${profile.businessName}.`
-                  : `Ranked for ${profile.businessName} using NAICS ${profile.naicsCodes.join(", ")}.`}
+                  ? `No exact NAICS match — showing broader live results for ${profile.businessName}.`
+                  : `Ranked for ${profile.businessName} · NAICS ${profile.naicsCodes.join(", ")}`}
               </p>
             </div>
             {fallbackReason ? (
-              <div className="inline-flex items-center gap-2 rounded border border-warn/40 bg-warn/10 px-3 py-2 text-sm text-warn">
-                <AlertCircle className="h-4 w-4" />
+              <div className="inline-flex items-center gap-1.5 rounded-lg border border-warn/30 bg-warn/8 px-3 py-1.5 text-xs text-warn">
+                <AlertCircle className="h-3.5 w-3.5" />
                 Fallback feed active
               </div>
             ) : showingBroaderSamResults ? (
-              <div className="inline-flex items-center gap-2 rounded border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-medium text-accent">
+              <div className="inline-flex items-center gap-1.5 rounded-lg border border-accent/20 bg-accent/8 px-3 py-1.5 text-xs text-accent">
                 <Info className="h-3.5 w-3.5" />
-                Showing other SAM.gov results
+                Broader SAM.gov results
               </div>
             ) : broadened.length && !emptyMatch ? (
-              <div className="inline-flex items-center gap-2 rounded border border-border bg-surface px-3 py-2 text-xs text-ink-muted">
+              <div className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs text-ink-muted">
                 <Info className="h-3.5 w-3.5" />
-                Broadened: dropped {broadened.join(" + ")}
+                Search broadened · dropped {broadened.join(" + ")}
               </div>
             ) : null}
           </div>
@@ -242,18 +240,15 @@ export default function FeedPage() {
           {emptyMatch ? (
             <EmptyState
               title="No live federal opportunities for your NAICS"
-              body={`SAM.gov is up, but no active solicitations were returned for NAICS ${profile.naicsCodes.join(", ")} or the broader live SAM.gov search. Try editing your profile and adding additional NAICS codes that overlap with what you sell.`}
+              body={`SAM.gov is up but returned no active solicitations for NAICS ${profile.naicsCodes.join(", ")}. Try adding additional NAICS codes in your profile.`}
               action={
-                <Link
-                  href="/onboarding?prefill=true"
-                  className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-bg"
-                >
+                <Link href="/onboarding?prefill=true" className="btn-primary">
                   Edit profile
                 </Link>
               }
             />
           ) : filtered.length ? (
-            <motion.div layout className="space-y-4">
+            <motion.div layout className="space-y-3">
               {filtered.map(({ opportunity, match }) => (
                 <OpportunityCard
                   key={opportunity.id}

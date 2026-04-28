@@ -10,14 +10,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg: "var(--bg)",
-        surface: "var(--surface)",
-        border: "var(--border)",
-        ink: "var(--ink)",
-        "ink-muted": "var(--ink-muted)",
-        accent: "var(--accent)",
-        warn: "var(--warn)",
-        danger: "var(--danger)",
+        bg: "rgb(var(--bg-rgb) / <alpha-value>)",
+        surface: "rgb(var(--surface-rgb) / <alpha-value>)",
+        "surface-2": "rgb(var(--surface-2-rgb) / <alpha-value>)",
+        border: "rgb(var(--border-rgb) / <alpha-value>)",
+        "border-bright": "rgb(var(--border-bright-rgb) / <alpha-value>)",
+        ink: "rgb(var(--ink-rgb) / <alpha-value>)",
+        "ink-muted": "rgb(var(--ink-muted-rgb) / <alpha-value>)",
+        "ink-dim": "rgb(var(--ink-dim-rgb) / <alpha-value>)",
+        accent: "rgb(var(--accent-rgb) / <alpha-value>)",
+        warn: "rgb(var(--warn-rgb) / <alpha-value>)",
+        danger: "rgb(var(--danger-rgb) / <alpha-value>)",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],

@@ -56,7 +56,10 @@
       "Bash(curl -s \"http://localhost:3000/api/opportunities?naics=322220&limit=2\")",
       "Bash(python -c \"import sys,json;d=json.load\\(sys.stdin\\);print\\('count:',len\\(d.get\\('opportunities',[]\\)\\)\\);print\\('fallback:',d.get\\('fallback'\\)\\);print\\('empty:',d.get\\('empty'\\)\\);print\\('broadened:',d.get\\('broadened'\\)\\);print\\('reason:',d.get\\('reason','n/a'\\)\\);first=\\(d.get\\('opportunities'\\) or [{}]\\)[0];print\\('first title:',first.get\\('title','none'\\)\\);print\\('first id:',first.get\\('id','none'\\)\\)\")",
       "Bash(python -c \"import sys,json;d=json.load\\(sys.stdin\\);print\\('count:',len\\(d.get\\('opportunities',[]\\)\\)\\);print\\('fallback:',d.get\\('fallback'\\)\\);print\\('empty:',d.get\\('empty'\\)\\);print\\('broadened:',d.get\\('broadened'\\)\\);print\\('reason:',\\(d.get\\('reason'\\) or ''\\)[:200]\\);print\\('first:',\\(d.get\\('opportunities'\\) or [{}]\\)[0].get\\('title','none'\\)\\)\")",
-      "Bash(python -c \"import sys,json;d=json.load\\(sys.stdin\\);print\\('count:',len\\(d.get\\('opportunities',[]\\)\\)\\);print\\('fallback:',d.get\\('fallback'\\)\\);print\\('empty:',d.get\\('empty'\\)\\);print\\('reason:',\\(d.get\\('reason'\\) or ''\\)[:200]\\)\")"
+      "Bash(python -c \"import sys,json;d=json.load\\(sys.stdin\\);print\\('count:',len\\(d.get\\('opportunities',[]\\)\\)\\);print\\('fallback:',d.get\\('fallback'\\)\\);print\\('empty:',d.get\\('empty'\\)\\);print\\('reason:',\\(d.get\\('reason'\\) or ''\\)[:200]\\)\")",
+      "Bash(npm uninstall *)",
+      "Bash(node -e \"const g = require\\('@google/genai'\\); console.log\\(Object.keys\\(g\\)\\)\")",
+      "Bash(node -e ' *)"
     ]
   }
 }

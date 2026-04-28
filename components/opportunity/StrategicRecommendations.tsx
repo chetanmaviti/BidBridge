@@ -36,9 +36,9 @@ export function StrategicRecommendations({
         });
       } catch {
         if (!cancelled) {
-          setText(`- Price near the ${formatNumber(stats.median)} median and explain any premium or discount clearly.
-- Emphasize the set-aside and small-business qualifications that match this cohort.
-- Review frequent winners as likely competitors or possible teaming partners.`);
+          setText(
+            `- Price near the ${formatNumber(stats.median)} median and explain any premium or discount clearly.\n- Emphasize set-aside and small-business qualifications that match this cohort.\n- Review frequent winners as likely competitors or possible teaming partners.`
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -51,12 +51,16 @@ export function StrategicRecommendations({
   }, [input, stats.median]);
 
   return (
-    <div className="rounded-lg border border-border bg-bg p-5">
-      <div className="mb-4 flex items-center gap-2">
-        <Lightbulb className="h-5 w-5 text-accent" />
-        <p className="font-display text-lg font-semibold">Strategic recommendations</p>
+    <div className="rounded-xl border border-border bg-bg/60 p-5">
+      <div className="mb-3 flex items-center gap-2">
+        <Lightbulb className="h-4 w-4 text-accent" />
+        <p className="text-sm font-semibold text-ink">Strategic recommendations</p>
       </div>
-      <StreamingText text={text} loading={loading} placeholder="Recommendations will appear after the cohort is analyzed." />
+      <StreamingText
+        text={text}
+        loading={loading}
+        placeholder="Recommendations will appear after the cohort is analyzed."
+      />
     </div>
   );
 }

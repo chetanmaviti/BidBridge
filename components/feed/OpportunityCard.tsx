@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bookmark, BookmarkCheck, FileText } from "lucide-react";
+import { Bookmark, BookmarkCheck, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { AgencyBadge } from "@/components/shared/AgencyBadge";
 import { cleanSnippet, formatMoneyRange, locationLabel } from "@/lib/format";
@@ -26,58 +26,75 @@ export function OpportunityCard({
   return (
     <motion.article
       layout
-      whileHover={{ y: -3 }}
-      className="rounded-lg border border-border bg-surface p-5 transition-colors hover:border-accent/50"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="group rounded-xl border border-border bg-surface transition-all hover:border-border-bright hover:shadow-lg hover:shadow-black/30"
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <AgencyBadge opportunity={opportunity} />
-            <SetAsideBadge code={opportunity.setAside} />
-            <DeadlineBadge date={opportunity.responseDeadLine} />
+      <div className="p-5">
+        <div className="flex items-start gap-4">
+          <div className="min-w-0 flex-1">
+            {/* Badge row */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <AgencyBadge opportunity={opportunity} />
+              <SetAsideBadge code={opportunity.setAside} />
+              <DeadlineBadge date={opportunity.responseDeadLine} />
+            </div>
+            {/* Title */}
+            <Link href={`/opportunity/${opportunity.id}`}>
+              <h2 className="mt-3 text-base font-semibold leading-snug text-ink transition-colors hover:text-accent">
+                {opportunity.title}
+              </h2>
+            </Link>
+            {/* Summary */}
+            <p className="mt-2 text-sm leading-relaxed text-ink-muted line-clamp-2">
+              {summary || cleanSnippet(opportunity.description, 200)}
+            </p>
           </div>
-          <Link href={`/opportunity/${opportunity.id}`}>
-            <h2 className="mt-4 font-display text-xl font-semibold leading-tight text-ink transition-colors hover:text-accent">
-              {opportunity.title}
-            </h2>
-          </Link>
-          <p className="mt-3 text-sm leading-6 text-ink-muted">
-            {summary || cleanSnippet(opportunity.description, 240)}
-          </p>
+          {/* Match score */}
+          <MatchScore score={match.score} />
         </div>
-        <MatchScore score={match.score} />
+
+        {/* Metrics strip */}
+        <div className="mt-4 grid grid-cols-3 gap-3 rounded-lg border border-border bg-bg/50 px-4 py-3">
+          <Meta label="Value" value={formatMoneyRange(opportunity)} />
+          <Meta label="Location" value={locationLabel(opportunity)} />
+          <Meta label="NAICS" value={opportunity.naicsCode ?? "TBD"} mono />
+        </div>
+
+        {/* Match reasons */}
+        {match.reasons.length ? (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {match.reasons.map((reason) => (
+              <span
+                key={reason}
+                className="rounded-md border border-border bg-bg px-2.5 py-1 text-xs text-ink-muted"
+              >
+                {reason}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
 
-      <div className="mt-5 grid gap-3 border-y border-border py-4 md:grid-cols-3">
-        <Meta label="Value" value={formatMoneyRange(opportunity)} />
-        <Meta label="Location" value={locationLabel(opportunity)} />
-        <Meta label="NAICS" value={opportunity.naicsCode ?? "TBD"} />
-      </div>
-
-      {match.reasons.length ? (
-        <ul className="mt-4 grid gap-2 text-sm text-ink-muted md:grid-cols-3">
-          {match.reasons.map((reason) => (
-            <li key={reason} className="rounded border border-border bg-bg px-3 py-2">
-              {reason}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      <div className="mt-5 flex flex-wrap items-center gap-3">
+      {/* Action footer */}
+      <div className="flex items-center justify-between border-t border-border px-5 py-3">
         <Link
           href={`/opportunity/${opportunity.id}`}
-          className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-bg transition-opacity hover:opacity-90"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-accent transition-all hover:gap-2.5"
         >
-          <FileText className="h-4 w-4" />
-          Draft Response
+          View & Draft
+          <ArrowRight className="h-4 w-4" />
         </Link>
         <button
           type="button"
           onClick={onToggleSaved}
-          className="inline-flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-bg"
+          className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-ink-muted transition-all hover:border-border-bright hover:text-ink"
         >
-          {saved ? <BookmarkCheck className="h-4 w-4 text-accent" /> : <Bookmark className="h-4 w-4" />}
+          {saved ? (
+            <BookmarkCheck className="h-3.5 w-3.5 text-accent" />
+          ) : (
+            <Bookmark className="h-3.5 w-3.5" />
+          )}
           {saved ? "Saved" : "Save"}
         </button>
       </div>
@@ -85,11 +102,23 @@ export function OpportunityCard({
   );
 }
 
-function Meta({ label, value }: { label: string; value: string }) {
+function Meta({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
   return (
-    <div>
-      <p className="font-mono text-[11px] uppercase tracking-normal text-ink-muted">{label}</p>
-      <p className="mt-1 truncate text-sm font-medium text-ink">{value}</p>
+    <div className="min-w-0">
+      <p className="label">{label}</p>
+      <p
+        className={`mt-0.5 truncate text-sm font-medium text-ink ${mono ? "font-mono" : ""}`}
+      >
+        {value}
+      </p>
     </div>
   );
 }
